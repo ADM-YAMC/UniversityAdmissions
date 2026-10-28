@@ -1,0 +1,8 @@
+﻿@page "/administration"
+@using Microsoft.AspNetCore.Authorization
+@using UniversityAdmissions.Application.Security
+@using UniversityAdmissions.Components.Layout
+@layout AdminLayout
+@attribute [Authorize(Policy = Permissions.ViewAdmissions)]
+<PageTitle>Administración de admisiones</PageTitle>
+<h1 class="text-2xl font-semibold text-slate-900">Solicitudes de admisión</h1>

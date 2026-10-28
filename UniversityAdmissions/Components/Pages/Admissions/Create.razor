@@ -1,0 +1,493 @@
+﻿@page "/admissions/create"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@using System.Text.RegularExpressions
+@using UniversityAdmissions.Application.DTOs.Applicants
+@using UniversityAdmissions.Application.DTOs.Admissions
+@using UniversityAdmissions.Application.DTOs.Catalogs
+@using UniversityAdmissions.Application.DTOs.Documents
+@using UniversityAdmissions.Application.Interfaces.Services
+@attribute [AllowAnonymous]
+@layout PublicLayout
+@inject IApplicantService ApplicantService
+@inject IAdmissionService AdmissionService
+@inject IDocumentService DocumentService
+@inject ICatalogService CatalogService
+@inject IConfiguration Configuration
+@inject IJSRuntime JS
+<PageTitle>Solicitud de admisión</PageTitle>
+<div class="min-h-screen bg-slate-50 px-4 py-10 sm:px-6">
+    <div class="mx-auto max-w-4xl">
+
+        <div class="mb-8">
+            <a href="/" class="mb-6 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#1D4F95] shadow-sm transition hover:border-[#2A73C6] hover:bg-blue-50">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Volver al inicio
+            </a>
+            <p class="mb-2 text-sm font-semibold uppercase tracking-wide text-[#2A73C6]">Admisiones</p>
+            <h1 class="text-3xl font-bold tracking-tight text-[#1D4F95]">Solicitud de admisión</h1>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Completa tus datos personales y adjunta los documentos requeridos para iniciar el proceso de admisión. Los campos marcados con * son obligatorios.</p>
+        </div>
+
+        <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div class="h-1 bg-[#C9AA06]"></div>
+            <div class="p-6 sm:p-8">
+                @if (loadingCatalogs)
+                {
+                    <p class="text-sm text-slate-600">Cargando formulario...</p>
+                }
+                else if (catalogError is not null)
+                {
+                    <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">@catalogError</div>
+                }
+                else if (completedAdmissionId.HasValue)
+                {
+                    <div class="rounded-xl border border-green-200 bg-green-50 p-8 text-center">
+                        <h2 class="text-xl font-bold text-green-800">¡Solicitud registrada correctamente!</h2>
+                        <p class="mt-3 text-sm text-green-700">Tu solicitud y los documentos requeridos fueron recibidos.</p>
+                        <p class="mt-3 text-lg font-semibold text-green-900">Número de solicitud: @completedAdmissionId.Value</p>
+                        <a href="/admissions/status" class="mt-6 inline-flex rounded-lg bg-[#1D4F95] px-5 py-3 text-sm font-semibold text-white">Consultar estado de mi solicitud</a>
+                    </div>
+                }
+                else
+                {
+                    <EditForm Model="@model" OnSubmit="SubmitAsync" FormName="admission-create">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-700" />
+                        <section>
+                            <h2 class="border-b border-slate-200 pb-3 text-lg font-semibold text-[#1D4F95]">Datos personales</h2>
+                            <div class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Nombres *</label>
+                                    <InputText @bind-Value="model.FirstName" disabled="@pendingAdmissionId.HasValue" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#2A73C6]" placeholder="Introduce tus nombres" />
+                                    <ValidationMessage For="@(() => model.FirstName)" class="mt-1 block text-xs text-red-600" />
+                                </div>
+                                <div>
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Apellidos *</label>
+                                    <InputText @bind-Value="model.LastName" disabled="@pendingAdmissionId.HasValue" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#2A73C6]" placeholder="Introduce tus apellidos" />
+                                    <ValidationMessage For="@(() => model.LastName)" class="mt-1 block text-xs text-red-600" />
+                                </div>
+                                <div>
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Fecha de nacimiento *</label>
+                                    <InputDate @bind-Value="model.DateOfBirth" disabled="@pendingAdmissionId.HasValue" max="@DateTime.Today.ToString("yyyy-MM-dd")" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#2A73C6]" />
+                                    <ValidationMessage For="@(() => model.DateOfBirth)" class="mt-1 block text-xs text-red-600" />
+                                </div>
+                                <div>
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Edad</label>
+                                    <div class="flex min-h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">@(Age.HasValue ? $"{Age.Value} años" : "Se calcula automáticamente")</div>
+                                </div>
+                                <div>
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Género *</label>
+                                    <InputSelect @bind-Value="model.GenderId" disabled="@pendingAdmissionId.HasValue" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#2A73C6]">
+                                        <option value="0">Selecciona una opción</option>
+                                        @foreach (var item in genders)
+                                        {
+                                            <option value="@item.Id">@item.Name</option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => model.GenderId)" class="mt-1 block text-xs text-red-600" />
+                                </div>
+                            </div>
+                        </section>
+                        <section class="mt-9">
+                            <h2 class="border-b border-slate-200 pb-3 text-lg font-semibold text-[#1D4F95]">Identificación</h2>
+                            <div class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Tipo de identificación *</label>
+                                    <InputSelect @bind-Value="model.IdentificationTypeId" @bind-Value:after="UpdateIdentificationMaskAsync" disabled="@pendingAdmissionId.HasValue" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#2A73C6]">
+                                        <option value="0">Selecciona una opción</option>
+                                        @foreach (var item in identificationTypes)
+                                        {
+                                            <option value="@item.Id">@item.Name</option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => model.IdentificationTypeId)" class="mt-1 block text-xs text-red-600" />
+                                </div>
+                                <div>
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Número de identificación *</label>
+                                    <InputText id="identificationNumber" @bind-Value="model.IdentificationNumber" disabled="@pendingAdmissionId.HasValue" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#2A73C6]" placeholder="Introduce el número de documento" />
+                                    <ValidationMessage For="@(() => model.IdentificationNumber)" class="mt-1 block text-xs text-red-600" />
+                                </div>
+                            </div>
+                        </section>
+                        <section class="mt-9">
+                            <h2 class="border-b border-slate-200 pb-3 text-lg font-semibold text-[#1D4F95]">Información de contacto</h2>
+                            <div class="mt-5">
+                                <label class="mb-2 block text-sm font-medium text-slate-700">Teléfono *</label>
+                                <InputText id="phoneNumber" @bind-Value="model.PhoneNumber" disabled="@pendingAdmissionId.HasValue" type="tel" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#2A73C6] sm:max-w-md" placeholder="Selecciona el país e introduce tu número" />
+                                <p class="mt-2 text-xs text-slate-500">Selecciona el país e introduce tu número. Se guardará con el prefijo internacional.</p>
+                                <ValidationMessage For="@(() => model.PhoneNumber)" class="mt-1 block text-xs text-red-600" />
+                            </div>
+                        </section>
+                        <section class="mt-9">
+                            <h2 class="border-b border-slate-200 pb-3 text-lg font-semibold text-[#1D4F95]">Documentos requeridos</h2>
+                            <p class="mt-3 text-sm text-slate-600">Adjunta una fotografía 2×2 y una copia legible de tu documento de identidad. Ambos documentos son obligatorios.</p>
+                            <div class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                                    <label class="mb-2 block text-sm font-semibold text-slate-700">Fotografía 2×2 *</label>
+                                    <p class="mb-3 text-xs text-slate-500">Fotografía reciente, de frente y con fondo claro. JPG o PNG, máximo 5 MB.</p>
+                                    @if (photoUploaded)
+                                    {
+                                        <p class="text-sm font-semibold text-green-700">Fotografía guardada correctamente.</p>
+                                    }
+                                    else
+                                    {
+                                        <InputFile OnChange="OnPhotoChanged" accept=".jpg,.jpeg,.png" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-[#2A73C6] file:px-4 file:py-2 file:font-medium file:text-white hover:file:bg-[#1D4F95]" />
+                                        @if (photoFile is not null)
+                                        {
+                                            <p class="mt-3 break-all text-xs font-medium text-green-700">@photoFile.Name</p>
+                                        }
+                                    }
+                                </div>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                                    <label class="mb-2 block text-sm font-semibold text-slate-700">Documento de identidad *</label>
+                                    <p class="mb-3 text-xs text-slate-500">Adjunta tu cédula o pasaporte. PDF, JPG o PNG, máximo 5 MB.</p>
+                                    @if (identityDocumentUploaded)
+                                    {
+                                        <p class="text-sm font-semibold text-green-700">Documento guardado correctamente.</p>
+                                    }
+                                    else
+                                    {
+                                        <InputFile OnChange="OnIdentityDocumentChanged" accept=".pdf,.jpg,.jpeg,.png" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-[#2A73C6] file:px-4 file:py-2 file:font-medium file:text-white hover:file:bg-[#1D4F95]" />
+                                        @if (identityDocumentFile is not null)
+                                        {
+                                            <p class="mt-3 break-all text-xs font-medium text-green-700">@identityDocumentFile.Name</p>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </section>
+                        <section class="mt-9">
+                            <h2 class="border-b border-slate-200 pb-3 text-lg font-semibold text-[#1D4F95]">Declaración y consentimiento</h2>
+                            <label class="mt-5 flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                                <InputCheckbox @bind-Value="acceptTerms" disabled="@pendingAdmissionId.HasValue" class="mt-0.5 h-4 w-4 accent-[#2A73C6]" />
+                                <span class="text-sm leading-6 text-slate-700">Confirmo que los datos proporcionados son correctos y acepto los términos y condiciones del proceso de admisión.</span>
+                            </label>
+                        </section>
+                        @if (errors.Count > 0)
+                        {
+                            <div class="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+                                @foreach (var error in errors)
+                                {
+                                    <p>@error</p>
+                                }
+                            </div>
+                        }
+                        @if (pendingAdmissionId.HasValue)
+                        {
+                            <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                                La solicitud número @pendingAdmissionId.Value ya fue creada. Puedes reintentar los documentos pendientes sin registrar otra solicitud.
+                            </div>
+                        }
+                        <div class="mt-8 flex justify-end border-t border-slate-200 pt-6">
+                            <button type="submit" disabled="@submitting" class="rounded-lg bg-[#2A73C6] px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1D4F95] disabled:cursor-not-allowed disabled:opacity-60">
+                                @(submitting ? "Procesando solicitud..." : pendingAdmissionId.HasValue ? "Reintentar carga de documentos" : "Enviar solicitud")
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
+        <p class="mt-6 text-center text-xs text-slate-500">La información suministrada será utilizada para gestionar tu solicitud de admisión.</p>
+    </div>
+</div>
+@code {
+    private const long MaxFileSize = 5 * 1024 * 1024;
+    private CreateApplicantDto model = new();
+    private List<CatalogItemDto> genders = new();
+    private List<CatalogItemDto> identificationTypes = new();
+    private List<string> errors = new();
+    private IBrowserFile? photoFile;
+    private IBrowserFile? identityDocumentFile;
+    private string? catalogError;
+    private bool loadingCatalogs = true;
+    private bool submitting;
+    private bool acceptTerms;
+    private bool masksInitialized;
+    private bool photoUploaded;
+    private bool identityDocumentUploaded;
+    private int? pendingAdmissionId;
+    private int? completedAdmissionId;
+    private int photoDocumentTypeId;
+    private int identityDocumentTypeId;
+    private int? Age
+    {
+        get
+        {
+            if (!model.DateOfBirth.HasValue) return null;
+            var birthDate = model.DateOfBirth.Value.Date;
+            var today = DateTime.Today;
+            if (birthDate > today || birthDate.Year < 1900) return null;
+            var age = today.Year - birthDate.Year;
+            if (birthDate > today.AddYears(-age)) age--;
+            return age;
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            photoDocumentTypeId = Configuration.GetValue<int>("Admissions:DocumentTypes:Photo");
+            identityDocumentTypeId = Configuration.GetValue<int>("Admissions:DocumentTypes:Identity");
+            if (photoDocumentTypeId <= 0 || identityDocumentTypeId <= 0 || photoDocumentTypeId == identityDocumentTypeId)
+            {
+                catalogError = "Los tipos de documentos requeridos no están configurados correctamente.";
+                return;
+            }
+            var gendersResponse = await CatalogService.GetGendersAsync();
+            var identificationResponse = await CatalogService.GetIdentificationTypesAsync();
+            if (!gendersResponse.Success || !identificationResponse.Success)
+            {
+                catalogError = "No fue posible cargar los catálogos del formulario. Actualiza la página para intentarlo nuevamente.";
+                return;
+            }
+            genders = gendersResponse.DataList?.ToList() ?? new();
+            identificationTypes = identificationResponse.DataList?.ToList() ?? new();
+            if (genders.Count == 0 || identificationTypes.Count == 0)
+            {
+                catalogError = "Los catálogos necesarios para completar la solicitud no están disponibles.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            catalogError = "Ocurrió un error al cargar el formulario.";
+        }
+        finally
+        {
+            loadingCatalogs = false;
+        }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!loadingCatalogs && catalogError is null && !masksInitialized && !completedAdmissionId.HasValue)
+        {
+            masksInitialized = true;
+            try
+            {
+                await JS.InvokeVoidAsync("inputMasks.applyPhone", "phoneNumber");
+                await UpdateIdentificationMaskAsync();
+            }
+            catch (JSException ex)
+            {
+                Console.WriteLine(ex);
+                masksInitialized = false;
+                catalogError = "No fue posible inicializar los campos del formulario. Actualiza la página.";
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+    private async Task UpdateIdentificationMaskAsync()
+    {
+        model.IdentificationNumber = string.Empty;
+        var selected = identificationTypes.FirstOrDefault(x => x.Id == model.IdentificationTypeId);
+        var name = selected?.Name ?? string.Empty;
+        var type = name.Contains("cédula", StringComparison.OrdinalIgnoreCase) || name.Contains("cedula", StringComparison.OrdinalIgnoreCase) ? "cedula" : name.Contains("pasaporte", StringComparison.OrdinalIgnoreCase) || name.Contains("passport", StringComparison.OrdinalIgnoreCase) ? "passport" : "free";
+        await JS.InvokeVoidAsync("inputMasks.apply", "identificationNumber", type);
+    }
+    private void OnPhotoChanged(InputFileChangeEventArgs e)
+    {
+        photoFile = e.File;
+        errors.RemoveAll(x => x.Contains("fotografía", StringComparison.OrdinalIgnoreCase));
+    }
+    private void OnIdentityDocumentChanged(InputFileChangeEventArgs e)
+    {
+        identityDocumentFile = e.File;
+        errors.RemoveAll(x => x.Contains("documento", StringComparison.OrdinalIgnoreCase));
+    }
+    private bool ValidateDocuments()
+    {
+        var valid = true;
+        if (!photoUploaded)
+        {
+            if (photoFile is null)
+            {
+                errors.Add("Debes adjuntar tu fotografía 2×2.");
+                valid = false;
+            }
+            else if (photoFile.Size == 0 || photoFile.Size > MaxFileSize || !IsAllowedFile(photoFile, false))
+            {
+                errors.Add("La fotografía debe ser JPG o PNG y tener un tamaño máximo de 5 MB.");
+                valid = false;
+            }
+        }
+        if (!identityDocumentUploaded)
+        {
+            if (identityDocumentFile is null)
+            {
+                errors.Add("Debes adjuntar tu documento de identidad.");
+                valid = false;
+            }
+            else if (identityDocumentFile.Size == 0 || identityDocumentFile.Size > MaxFileSize || !IsAllowedFile(identityDocumentFile, true))
+            {
+                errors.Add("El documento debe ser PDF, JPG o PNG y tener un tamaño máximo de 5 MB.");
+                valid = false;
+            }
+        }
+        return valid;
+    }
+    private static bool IsAllowedFile(IBrowserFile file, bool allowPdf)
+    {
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+        var contentType = file.ContentType.ToLowerInvariant();
+        return extension switch
+        {
+            ".jpg" or ".jpeg" => contentType == "image/jpeg",
+            ".png" => contentType == "image/png",
+            ".pdf" => allowPdf && contentType == "application/pdf",
+            _ => false
+        };
+    }
+    private async Task SubmitAsync(EditContext editContext)
+    {
+        if (submitting || completedAdmissionId.HasValue) return;
+        submitting = true;
+        errors.Clear();
+        try
+        {
+            if (!ValidateDocuments()) return;
+            if (!pendingAdmissionId.HasValue)
+            {
+                if (!acceptTerms)
+                {
+                    errors.Add("Debes aceptar los términos y condiciones para continuar.");
+                    return;
+                }
+                if (!Age.HasValue)
+                {
+                    errors.Add("Introduce una fecha de nacimiento válida.");
+                    return;
+                }
+                if (!genders.Any(x => x.Id == model.GenderId) || !identificationTypes.Any(x => x.Id == model.IdentificationTypeId))
+                {
+                    errors.Add("Selecciona un género y un tipo de identificación válidos.");
+                    return;
+                }
+                if (!await JS.InvokeAsync<bool>("inputMasks.isValidPhone", "phoneNumber"))
+                {
+                    errors.Add("Introduce un número de teléfono internacional válido.");
+                    return;
+                }
+                var phone = await JS.InvokeAsync<string>("inputMasks.getPhoneNumber", "phoneNumber");
+                if (string.IsNullOrWhiteSpace(phone) || !Regex.IsMatch(phone, @"^\+[1-9]\d{1,14}$"))
+                {
+                    errors.Add("El número de teléfono debe incluir un código de país válido.");
+                    return;
+                }
+                var selectedIdentification = identificationTypes.First(x => x.Id == model.IdentificationTypeId).Name;
+                var isCedula = selectedIdentification.Contains("cédula", StringComparison.OrdinalIgnoreCase) || selectedIdentification.Contains("cedula", StringComparison.OrdinalIgnoreCase);
+                var identification = await JS.InvokeAsync<string>("inputMasks.getIdentification", "identificationNumber");
+                if (isCedula && !Regex.IsMatch(identification, @"^\d{3}-\d{7}-\d$"))
+                {
+                    errors.Add("La cédula debe contener 11 dígitos con el formato 000-0000000-0.");
+                    return;
+                }
+                if (string.IsNullOrWhiteSpace(identification))
+                {
+                    errors.Add("Introduce un número de identificación válido.");
+                    return;
+                }
+                model.PhoneNumber = phone;
+                model.IdentificationNumber = identification;
+                editContext.NotifyFieldChanged(new FieldIdentifier(model, nameof(model.PhoneNumber)));
+                editContext.NotifyFieldChanged(new FieldIdentifier(model, nameof(model.IdentificationNumber)));
+                if (!editContext.Validate()) return;
+                var applicantResponse = await ApplicantService.CreateAsync(model);
+                if (!applicantResponse.Success || applicantResponse.Identity <= 0)
+                {
+                    errors.AddRange(applicantResponse.Errors ?? new List<string>());
+                    if (errors.Count == 0) errors.Add("No fue posible registrar tus datos.");
+                    return;
+                }
+                var admissionResponse = await AdmissionService.CreateAsync(new CreateAdmissionDto
+                    {
+                        ApplicantId = applicantResponse.Identity,
+                        AcceptTerms = acceptTerms
+                    });
+                if (!admissionResponse.Success || admissionResponse.Identity <= 0)
+                {
+                    errors.AddRange(admissionResponse.Errors ?? new List<string>());
+                    if (errors.Count == 0) errors.Add("No fue posible crear la solicitud de admisión.");
+                    errors.Add("Tus datos personales fueron registrados. Contacta a admisiones antes de volver a enviar el formulario.");
+                    return;
+                }
+                pendingAdmissionId = admissionResponse.Identity;
+            }
+            if (!await UploadDocumentsAsync(pendingAdmissionId.Value)) return;
+            completedAdmissionId = pendingAdmissionId.Value;
+            await JS.InvokeVoidAsync("admissionAlerts.success", "¡Solicitud registrada!", $"Tu solicitud de admisión y tus documentos fueron recibidos correctamente. Número de solicitud: {completedAdmissionId.Value}.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            errors.Add("Ocurrió un error al procesar la solicitud. Si ya se creó, contacta a admisiones antes de intentar registrarla nuevamente.");
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+    private async Task<bool> UploadDocumentsAsync(int admissionId)
+    {
+        if (!photoUploaded)
+        {
+            if (photoFile is null) return false;
+            try
+            {
+                await using var photoStream = photoFile.OpenReadStream(MaxFileSize);
+                var response = await DocumentService.UploadAsync(new UploadDocumentDto
+                    {
+                        AdmissionId = admissionId,
+                        DocumentTypeId = photoDocumentTypeId,
+                        FileName = photoFile.Name,
+                        Content = photoStream
+                    });
+                if (!response.Success)
+                {
+                    errors.AddRange(response.Errors ?? new List<string>());
+                    if (errors.Count == 0) errors.Add("No fue posible guardar la fotografía 2×2.");
+                    return false;
+                }
+                photoUploaded = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                errors.Add("Ocurrió un error al guardar la fotografía 2×2.");
+                return false;
+            }
+        }
+        if (!identityDocumentUploaded)
+        {
+            if (identityDocumentFile is null) return false;
+            try
+            {
+                await using var documentStream = identityDocumentFile.OpenReadStream(MaxFileSize);
+                var response = await DocumentService.UploadAsync(new UploadDocumentDto
+                    {
+                        AdmissionId = admissionId,
+                        DocumentTypeId = identityDocumentTypeId,
+                        FileName = identityDocumentFile.Name,
+                        Content = documentStream
+                    });
+                if (!response.Success)
+                {
+                    errors.AddRange(response.Errors ?? new List<string>());
+                    if (errors.Count == 0) errors.Add("No fue posible guardar el documento de identidad.");
+                    return false;
+                }
+                identityDocumentUploaded = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                errors.Add("Ocurrió un error al guardar el documento de identidad.");
+                return false;
+            }
+        }
+        return photoUploaded && identityDocumentUploaded;
+    }
+}

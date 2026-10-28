@@ -1,0 +1,96 @@
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.slnx.user
+
+# .NET build outputs
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
+artifacts/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+coverage-report/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/packages/
+
+# Logs and temporary files
+*.log
+logs/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/appsettings.*.local.json
+**/secrets.json
+*.pfx
+*.p12
+*.pem
+*.key
+
+# Node.js / Tailwind dependencies and caches
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+*.tsbuildinfo
+.cache/
+.parcel-cache/
+
+# Generated front-end output (if applicable)
+dist/
+build/
+
+# User-uploaded files and local storage
+**/wwwroot/uploads/
+**/wwwroot/documents/
+**/wwwroot/storage/
+**/Uploads/
+**/App_Data/
+
+# Local databases
+*.mdf
+*.ldf
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Operating systems
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Publish and deployment artifacts
+publish/
+**/PublishProfiles/*.pubxml.user
+*.publishsettings
+*.azurePubxml
+
+# Keep source files, EF Core migrations, package manifests and lockfiles tracked.

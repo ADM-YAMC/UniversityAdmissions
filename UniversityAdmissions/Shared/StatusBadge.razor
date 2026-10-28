@@ -1,0 +1,12 @@
+﻿<span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold @CssClass">@Status</span>
+@code {
+    [Parameter] public string Status { get; set; } = string.Empty;
+    private string CssClass => Status.ToLowerInvariant() switch
+    {
+        "pendiente" => "bg-amber-100 text-amber-800",
+        "en revisión" => "bg-blue-100 text-blue-800",
+        "aprobada" => "bg-green-100 text-green-800",
+        "rechazada" => "bg-red-100 text-red-800",
+        _ => "bg-slate-100 text-slate-700"
+    };
+}

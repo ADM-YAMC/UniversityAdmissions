@@ -1,0 +1,32 @@
+﻿@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using UniversityAdmissions.Components
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="css/tailwind.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.5/build/css/intlTelInput.css">
+    <HeadOutlet @rendermode="PageRenderMode" />
+</head>
+<body>
+    <Routes @rendermode="PageRenderMode" />
+    <script src="_framework/blazor.web.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.5/build/js/intlTelInput.min.js"></script>
+    <script src="https://unpkg.com/imask@7.6.1/dist/imask.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <script src="js/admissionAlerts.js"></script>
+    <script src="js/inputMasks.js"></script>
+    <script src="/js/admissionAdmin.js"></script>
+</body>
+</html>
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+    private IComponentRenderMode? PageRenderMode =>
+        HttpContext?.Request.Path.StartsWithSegments("/account") == true
+            ? null
+            : RenderMode.InteractiveServer;
+}

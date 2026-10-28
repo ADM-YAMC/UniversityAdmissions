@@ -1,0 +1,86 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+@layout PublicLayout
+<PageTitle>Inicio | Sistema de Admisiones</PageTitle>
+<div class="min-h-screen bg-slate-50">
+
+    <header class="fixed top-0 left-0 z-50 w-full bg-[#103C73] text-white shadow-md">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+            <a href="/" class="flex items-center gap-3">
+                <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#C9AA06] text-xl font-bold text-white">U</div>
+                <div>
+                    <p class="text-lg font-bold tracking-wide">UNIVERSITY</p>
+                    <p class="text-xs text-blue-100">Sistema de Admisiones</p>
+                </div>
+            </a>
+            <a href="/admin/login" class="rounded-lg border border-white/30 px-4 py-2 text-sm font-medium transition hover:bg-white/10">Acceso administrativo</a>
+        </div>
+    </header>
+
+    <main class="pt-[84px]">
+        <section class="relative overflow-hidden bg-gradient-to-br from-[#103C73] via-[#1D4F95] to-[#2A73C6]">
+            <div class="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-white/10 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-32 left-10 h-80 w-80 rounded-full bg-[#C9AA06]/20 blur-3xl"></div>
+            <div class="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-20 sm:px-8 lg:grid-cols-2 lg:py-28">
+                <div class="text-white">
+                    <span class="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-blue-100">Proceso de admisión en línea</span>
+                    <h1 class="mt-7 max-w-2xl text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">Tu futuro comienza <span class="text-[#F4CF32]">aquí.</span></h1>
+                    <p class="mt-6 max-w-xl text-base leading-8 text-blue-100 sm:text-lg">Inicia tu proceso de admisión de forma sencilla y segura. Completa tus datos personales y adjunta los documentos requeridos desde cualquier lugar.</p>
+                    <div class="mt-9 flex flex-wrap gap-4">
+                        <a href="/admissions/create" class="inline-flex items-center justify-center rounded-xl bg-[#F4CF32] px-7 py-4 text-sm font-bold text-[#103C73] shadow-lg transition hover:bg-[#E5C126]">Solicitar admisión</a>
+                        <a href="/admissions/status" class="inline-flex items-center justify-center rounded-xl border border-white/40 bg-white/10 px-7 py-4 text-sm font-semibold text-white transition hover:bg-white/20">Consultar mi solicitud</a>
+                    </div>
+                </div>
+                <div class="rounded-2xl border border-white/20 bg-white p-7 shadow-2xl sm:p-9">
+                    <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-[#1D4F95]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9m-13-6h7l6 6M8 3v6h6M8 15h8m-8 4h5" /></svg>
+                    </div>
+                    <h2 class="mt-6 text-2xl font-bold text-[#103C73]">Comienza tu solicitud</h2>
+                    <p class="mt-3 text-sm leading-7 text-slate-600">El proceso está diseñado para que puedas registrar tu información y enviar los documentos necesarios de manera organizada.</p>
+                    <div class="mt-7 space-y-5">
+                        <div class="flex items-start gap-4">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-[#1D4F95]">01</span>
+                            <div><h3 class="text-sm font-semibold text-slate-800">Completa tus datos</h3><p class="mt-1 text-sm text-slate-500">Introduce tu información personal y de contacto.</p></div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-[#1D4F95]">02</span>
+                            <div><h3 class="text-sm font-semibold text-slate-800">Adjunta tus documentos</h3><p class="mt-1 text-sm text-slate-500">Carga tu fotografía 2×2 y documento de identidad.</p></div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-[#1D4F95]">03</span>
+                            <div><h3 class="text-sm font-semibold text-slate-800">Envía tu solicitud</h3><p class="mt-1 text-sm text-slate-500">Recibe el número de tu solicitud al completar el registro.</p></div>
+                        </div>
+                    </div>
+                    <a href="/admissions/create" class="mt-8 flex w-full items-center justify-center rounded-xl bg-[#1D4F95] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#103C73]">Iniciar solicitud</a>
+                </div>
+            </div>
+        </section>
+        <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8">
+            <div class="mb-10 text-center">
+                <h2 class="text-2xl font-bold text-[#103C73]">Una experiencia de admisión más sencilla</h2>
+                <p class="mt-3 text-sm text-slate-500">Realiza tu solicitud en línea de manera organizada.</p>
+            </div>
+            <div class="grid gap-5 md:grid-cols-3">
+                <div class="rounded-xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-2xl text-[#1D4F95]">✎</div>
+                    <h3 class="font-semibold text-[#103C73]">Proceso en línea</h3>
+                    <p class="mt-3 text-sm leading-7 text-slate-600">Completa tu formulario de admisión desde cualquier lugar con acceso a internet.</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-2xl text-[#1D4F95]">✓</div>
+                    <h3 class="font-semibold text-[#103C73]">Información protegida</h3>
+                    <p class="mt-3 text-sm leading-7 text-slate-600">Tus datos y documentos son utilizados para gestionar el proceso de admisión.</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-2xl text-[#1D4F95]">▤</div>
+                    <h3 class="font-semibold text-[#103C73]">Documentos digitales</h3>
+                    <p class="mt-3 text-sm leading-7 text-slate-600">Adjunta tu fotografía y documento de identidad sin entregar archivos físicos en esta etapa.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+    <footer class="bg-[#103C73] px-5 py-6 text-center text-xs text-blue-100 sm:px-8">
+        Sistema de Gestión de Admisiones · Todos los derechos reservados
+    </footer>
+</div>

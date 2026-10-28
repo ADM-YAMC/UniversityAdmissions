@@ -1,0 +1,56 @@
+﻿@page "/admin/login"
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+@layout LoginLayout
+<PageTitle>Iniciar sesión | Admisiones</PageTitle>
+<div class="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+    <div class="w-full max-w-md overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="h-1 bg-[#C9AA06]"></div>
+        <div class="p-8">
+            <div class="mb-8 text-center">
+                <h1 class="text-2xl font-bold text-[#1D4F95]">Acceso administrativo</h1>
+            </div>
+            @if (Error == "invalid")
+            {
+                <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+                    Correo electrónico o contraseña incorrectos.
+                </div>
+            }
+            else if (Error == "access")
+            {
+                <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+                    No tienes permisos para acceder al módulo administrativo.
+                </div>
+            }
+            else if (Error == "locked")
+            {
+                <div class="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" role="alert">
+                    Tu cuenta está bloqueada temporalmente por intentos fallidos.
+                </div>
+            }
+            <form method="post" action="/admin/auth/login">
+                <AntiforgeryToken />
+                <div class="space-y-5">
+                    <div>
+                        <label for="email" class="mb-2 block text-sm font-medium text-slate-700">Correo electrónico</label>
+                        <input id="email" name="Email" type="email" autocomplete="username" required maxlength="256" class="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm outline-none focus:border-[#2A73C6]" placeholder="correo@institucion.edu.do" />
+                    </div>
+                    <div>
+                        <label for="password" class="mb-2 block text-sm font-medium text-slate-700">Contraseña</label>
+                        <input id="password" name="Password" type="password" autocomplete="current-password" required class="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm outline-none focus:border-[#2A73C6]" placeholder="Introduce tu contraseña" />
+                    </div>
+                    <button type="submit" class="w-full rounded-lg bg-[#2A73C6] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1D4F95]">
+                        Iniciar sesión
+                    </button>
+                </div>
+            </form>
+            <div class="mt-6 text-center">
+                <a href="/" class="text-sm font-medium text-[#2A73C6] hover:underline">Volver al formulario de admisión</a>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
+}

@@ -1,0 +1,299 @@
+﻿@page "/admin/admissions/{Id:int}"
+@using System.Security.Claims
+@using UniversityAdmissions.Application.DTOs.Admissions
+@using UniversityAdmissions.Application.DTOs.Documents
+@using UniversityAdmissions.Application.Interfaces.Services
+@attribute [Authorize(Policy = Permissions.ViewAdmissions)]
+@layout AdminLayout
+@inject IAdmissionService AdmissionService
+@inject IDocumentService DocumentService
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAuthorizationService AuthorizationService
+<PageTitle>Detalle de solicitud</PageTitle>
+<div class="mx-auto max-w-5xl mt-50">
+    <a href="/admin/admissions" class="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-[#1D4F95] hover:underline">
+        <span>Volver a solicitudes</span>
+    </a>
+    @if (loading)
+    {
+        <div class="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <p class="text-sm text-slate-500">Cargando solicitud...</p>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(error))
+    {
+        <div class="rounded-xl border border-red-200 bg-red-50 p-5">
+            <p class="text-sm text-red-700">@error</p>
+        </div>
+    }
+    else if (admission != null)
+    {
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-[#1D4F95]">
+                    Solicitud #@admission.Id
+                </h1>
+                <p class="mt-2 text-sm text-slate-500">
+                    Registrada el @admission.ApplicationDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                </p>
+            </div>
+            <StatusBadge Status="@admission.Status" />
+        </div>
+        <section class="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="mb-5 text-lg font-bold text-[#1D4F95]">Información del aspirante</h2>
+            <div class="grid gap-5 text-sm sm:grid-cols-2">
+                <div>
+                    <p class="text-slate-500">Nombre completo</p>
+                    <p class="mt-1 font-semibold text-slate-800">
+                        @admission.Applicant.FirstName @admission.Applicant.LastName
+                    </p>
+                </div>
+                <div>
+                    <p class="text-slate-500">Identificación</p>
+                    <p class="mt-1 font-semibold text-slate-800">
+                        @admission.Applicant.IdentificationType · @admission.Applicant.IdentificationNumber
+                    </p>
+                </div>
+                <div>
+                    <p class="text-slate-500">Fecha de nacimiento</p>
+                    <p class="mt-1 font-semibold text-slate-800">
+                        @admission.Applicant.DateOfBirth.ToString("dd/MM/yyyy")
+                    </p>
+                </div>
+                <div>
+                    <p class="text-slate-500">Edad</p>
+                    <p class="mt-1 font-semibold text-slate-800">
+                        @admission.Applicant.Age años
+                    </p>
+                </div>
+                <div>
+                    <p class="text-slate-500">Género</p>
+                    <p class="mt-1 font-semibold text-slate-800">
+                        @admission.Applicant.Gender
+                    </p>
+                </div>
+                <div>
+                    <p class="text-slate-500">Teléfono</p>
+                    <p class="mt-1 font-semibold text-slate-800">
+                        @admission.Applicant.PhoneNumber
+                    </p>
+                </div>
+                <div>
+                    <p class="text-slate-500">Aceptación de términos</p>
+                    <p class="mt-1 font-semibold text-slate-800">
+                        @(admission.AcceptTerms ? "Aceptados" : "No aceptados")
+                    </p>
+                </div>
+            </div>
+        </section>
+        <section class="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="mb-4 text-lg font-bold text-[#1D4F95]">Documentos adjuntos</h2>
+            @if (admission.Documents.Count == 0)
+            {
+                <p class="text-sm text-slate-500">No hay documentos adjuntos.</p>
+            }
+            else
+            {
+                <div class="divide-y divide-slate-100">
+                    @foreach (var doc in admission.Documents)
+                    {
+                        <div @key="doc.Id" class="flex flex-wrap items-center justify-between gap-3 py-4">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-800">
+                                    @doc.DocumentType
+                                </p>
+                                <p class="mt-1 break-all text-xs text-slate-500">
+                                    @doc.FileName · @(Math.Round(doc.FileSize / 1024.0, 1)) KB
+                                </p>
+                            </div>
+                            <button type="button" @onclick="() => DownloadAsync(doc)" disabled="@downloading" class="rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-[#1D4F95] transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50">
+                                Descargar
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+        @if ((canReview && admission.Status == "Pendiente") || ((canApprove || canReject) && admission.Status == "En revisión"))
+        {
+            <section class="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 class="mb-3 text-lg font-bold text-[#1D4F95]">Cambiar estado</h2>
+                <label class="mb-2 block text-sm font-medium text-slate-700">Observaciones</label>
+                <textarea @bind="comments" maxlength="1000" rows="3" placeholder="Escribe las observaciones de la decisión" class="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none transition focus:border-[#2A73C6] focus:ring-1 focus:ring-[#2A73C6]"></textarea>
+                <p class="mt-2 text-xs text-slate-500">
+                    Para rechazar una solicitud, las observaciones son obligatorias.
+                </p>
+
+                <div class="mt-5 flex flex-wrap items-center gap-3">
+                    @if (canReview && admission.Status == "Pendiente")
+                    {
+                        <button type="button" disabled="@saving" @onclick="() => ChangeStatusAsync(2)" class="rounded-lg px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50" style="background-color: #1D4F95; color: #FFFFFF;">
+                            Pasar a revisión
+                        </button>
+                    }
+                    @if (canApprove && admission.Status == "En revisión")
+                    {
+                        <button type="button" disabled="@saving" @onclick="() => ChangeStatusAsync(3)" class="rounded-lg px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50" style="background-color: #15803D; color: #FFFFFF;">
+                            Aprobar
+                        </button>
+                    }
+                    @if (canReject && admission.Status == "En revisión")
+                    {
+                        <button type="button" disabled="@saving" @onclick="() => ChangeStatusAsync(4)" class="rounded-lg px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50" style="background-color: #B91C1C; color: #FFFFFF;">
+                            Rechazar
+                        </button>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(actionError))
+                {
+                    <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
+                        <p class="text-sm text-red-700">@actionError</p>
+                    </div>
+                }
+            </section>
+        }
+        @if (!string.IsNullOrWhiteSpace(actionError) && !((canReview && admission.Status == "Pendiente") || ((canApprove || canReject) && admission.Status == "En revisión")))
+        {
+            <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+                <p class="text-sm text-red-700">@actionError</p>
+            </div>
+        }
+    }
+</div>
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    private AdmissionDto? admission;
+    private bool loading = true;
+    private bool saving;
+    private bool downloading;
+    private bool canReview;
+    private bool canApprove;
+    private bool canReject;
+    private string comments = string.Empty;
+    private string? error;
+    private string? actionError;
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        error = null;
+        actionError = null;
+        try
+        {
+            var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            canReview = (await AuthorizationService.AuthorizeAsync(state.User, Permissions.ReviewAdmissions)).Succeeded;
+            canApprove = (await AuthorizationService.AuthorizeAsync(state.User, Permissions.ApproveAdmissions)).Succeeded;
+            canReject = (await AuthorizationService.AuthorizeAsync(state.User, Permissions.RejectAdmissions)).Succeeded;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            error = "Ocurrió un error al cargar la solicitud.";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+    private async Task LoadAsync()
+    {
+        var response = await AdmissionService.GetByIdAsync(Id);
+        admission = response.Success ? response.SingleData : null;
+        error = admission == null ? string.Join(" ", response.Errors ?? new List<string>()) : null;
+        if (admission == null && string.IsNullOrWhiteSpace(error))
+        {
+            error = "Solicitud no encontrada.";
+        }
+    }
+    private async Task ChangeStatusAsync(int newStatusId)
+    {
+        if (saving || admission == null) return;
+        actionError = null;
+        if (newStatusId == 4 && string.IsNullOrWhiteSpace(comments))
+        {
+            actionError = "Debes indicar el motivo del rechazo.";
+            return;
+        }
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var policy = newStatusId == 2 ? Permissions.ReviewAdmissions : newStatusId == 3 ? Permissions.ApproveAdmissions : Permissions.RejectAdmissions;
+        if (!(await AuthorizationService.AuthorizeAsync(state.User, policy)).Succeeded)
+        {
+            actionError = "No tienes permisos para realizar esta acción.";
+            return;
+        }
+        var userId = state.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            actionError = "No fue posible identificar al usuario.";
+            return;
+        }
+        var label = newStatusId == 2 ? "pasar a revisión" : newStatusId == 3 ? "aprobar" : "rechazar";
+        var confirmed = await JS.InvokeAsync<bool>("admissionAdmin.confirm", "Confirmar cambio", $"¿Deseas {label} la solicitud #{Id}?");
+        if (!confirmed) return;
+        saving = true;
+        try
+        {
+            var response = await AdmissionService.ChangeStatusAsync(new ChangeAdmissionStatusDto
+                {
+                    AdmissionId = Id,
+                    NewStatusId = newStatusId,
+                    UserId = userId,
+                    Comments = comments
+                });
+            if (!response.Success)
+            {
+                actionError = string.Join(" ", response.Errors ?? new List<string>());
+                if (string.IsNullOrWhiteSpace(actionError)) actionError = "No fue posible actualizar el estado.";
+                return;
+            }
+            comments = string.Empty;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            actionError = "No fue posible cambiar el estado.";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+    private async Task DownloadAsync(AdmissionDocumentDto doc)
+    {
+        if (downloading) return;
+        downloading = true;
+        actionError = null;
+        try
+        {
+            var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (!(await AuthorizationService.AuthorizeAsync(state.User, Permissions.ViewDocuments)).Succeeded)
+            {
+                actionError = "No tienes permisos para descargar documentos.";
+                return;
+            }
+            var response = await DocumentService.DownloadAsync(doc.Id);
+            if (!response.Success || response.SingleData == null)
+            {
+                actionError = string.Join(" ", response.Errors ?? new List<string>());
+                if (string.IsNullOrWhiteSpace(actionError)) actionError = "No fue posible descargar el documento.";
+                return;
+            }
+            await using var stream = response.SingleData.Content;
+            using var reference = new DotNetStreamReference(stream);
+            await JS.InvokeVoidAsync("admissionAdmin.download", response.SingleData.FileName, reference);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            actionError = "No fue posible descargar el documento.";
+        }
+        finally
+        {
+            downloading = false;
+        }
+    }
+}

@@ -1,0 +1,105 @@
+﻿@page "/admissions/status"
+@using Microsoft.AspNetCore.Authorization
+@using UniversityAdmissions.Application.DTOs.Admissions
+@using UniversityAdmissions.Application.Interfaces.Services
+@attribute [AllowAnonymous]
+@layout PublicLayout
+@inject IAdmissionService AdmissionService
+<PageTitle>Consultar solicitud | Admisiones</PageTitle>
+<div class="min-h-screen bg-slate-50 px-4 py-12 sm:px-6">
+    <div class="mx-auto max-w-2xl">
+        <a href="/" class="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-[#1D4F95] hover:underline">Volver al inicio</a>
+        <div class="mb-8">
+            <p class="text-sm font-semibold uppercase tracking-wide text-[#2A73C6]">Seguimiento de admisiones</p>
+            <h1 class="mt-2 text-3xl font-bold text-[#103C73]">Consulta el estado de tu solicitud</h1>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Introduce el número que recibiste al registrarte y la misma identificación que utilizaste en el formulario.</p>
+        </div>
+        <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div class="h-1 bg-[#C9AA06]"></div>
+            <div class="p-6 sm:p-8">
+                <form @onsubmit="ConsultAsync" @onsubmit:preventDefault>
+                    <div class="grid gap-5 sm:grid-cols-2">
+                        <div>
+                            <label for="admissionId" class="mb-2 block text-sm font-semibold text-slate-700">Número de solicitud</label>
+                            <input id="admissionId" type="number" min="1" step="1" required @bind="admissionId" class="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#2A73C6]" placeholder="Ej. 1025" />
+                        </div>
+                        <div>
+                            <label for="identification" class="mb-2 block text-sm font-semibold text-slate-700">Número de identificación</label>
+                            <input id="identification" type="text" required maxlength="50" autocomplete="off" @bind="identification" class="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#2A73C6]" placeholder="Cédula o pasaporte" />
+                        </div>
+                    </div>
+                    <p class="mt-3 text-xs text-slate-500">Escribe la identificación tal como la registraste, incluyendo los guiones si corresponde.</p>
+                    <button type="submit" disabled="@loading" class="mt-6 w-full rounded-lg px-5 py-3 text-sm font-semibold disabled:opacity-60" style="background-color:#1D4F95;color:#FFFFFF">@(loading ? "Consultando..." : "Consultar mi solicitud")</button>
+                </form>
+                @if (!string.IsNullOrWhiteSpace(error))
+                {
+                    <div role="alert" class="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">@error</div>
+                }
+                @if (result != null)
+                {
+                    <div class="mt-8 border-t border-slate-200 pt-6">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <h2 class="text-lg font-bold text-[#103C73]">Solicitud #@result.AdmissionId</h2>
+                            <StatusBadge Status="@result.Status" />
+                        </div>
+                        <p class="mt-2 text-sm text-slate-500">Fecha de registro: @result.ApplicationDate.ToLocalTime().ToString("dd/MM/yyyy")</p>
+                        <div class="mt-5 rounded-lg bg-blue-50 p-5">
+                            <p class="text-sm font-semibold text-[#103C73]">@StatusTitle</p>
+                            <p class="mt-2 text-sm leading-6 text-slate-700">@StatusDescription</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    private int? admissionId;
+    private string identification = string.Empty;
+    private PublicAdmissionStatusDto? result;
+    private string? error;
+    private bool loading;
+    private string StatusTitle => result?.Status switch
+    {
+        "Pendiente" => "Solicitud recibida",
+        "En revisión" => "Solicitud en revisión",
+        "Aprobada" => "Solicitud aprobada",
+        "Rechazada" => "Solicitud no aprobada",
+        _ => "Estado de la solicitud"
+    };
+    private string StatusDescription => result?.Status switch
+    {
+        "Pendiente" => "Hemos recibido tu solicitud. El departamento de admisiones la revisará próximamente.",
+        "En revisión" => "El departamento de admisiones está evaluando tu solicitud y documentación.",
+        "Aprobada" => "Tu solicitud ha sido aprobada. Contacta al departamento de admisiones para conocer los siguientes pasos.",
+        "Rechazada" => "Tu solicitud no ha sido aprobada. Puedes comunicarte con el departamento de admisiones para obtener orientación.",
+        _ => "Comunícate con el departamento de admisiones si necesitas más información."
+    };
+    private async Task ConsultAsync()
+    {
+        if (loading) return;
+        result = null;
+        error = null;
+        if (admissionId is null or <= 0 || string.IsNullOrWhiteSpace(identification))
+        {
+            error = "Introduce los dos datos para realizar la consulta.";
+            return;
+        }
+        loading = true;
+        try
+        {
+            var response = await AdmissionService.GetPublicStatusAsync(admissionId.Value, identification);
+            if (response.Success && response.SingleData != null) result = response.SingleData;
+            else error = string.Join(" ", response.Errors ?? new List<string>());
+            if (result == null && string.IsNullOrWhiteSpace(error)) error = "No fue posible consultar la solicitud.";
+        }
+        catch (Exception)
+        {
+            error = "No fue posible consultar el estado. Inténtalo más tarde.";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+}
